@@ -1,5 +1,8 @@
 databaseChangeLog:
   - include:
+      file: db/changelog/changes/000-create-initial-tables.yaml
+      relativeToChangelogFile: false
+  - include:
       file: db/changelog/changes/001-drop-type-column-from-messages.yaml
       relativeToChangelogFile: false
   - include:

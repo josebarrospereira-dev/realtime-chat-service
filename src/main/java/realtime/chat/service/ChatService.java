@@ -27,6 +27,6 @@ public class ChatService {
                 .timestamp(LocalDateTime.now())
                 .build());
 
-        return new ChatMessageDto(username, entity.getContent(), entity.getTimestamp());
+        return new ChatMessageDto(entity.getId(), username, entity.getContent(), entity.getTimestamp());
     }
 }
