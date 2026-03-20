@@ -1,0 +1,41 @@
+server:
+  address: 0.0.0.0
+  servlet:
+    context-path: /api
+  port: 8080
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    enabled: true
+  api-docs:
+    path: /v3/api-docs
+    enabled: true
+
+spring:
+  application:
+    name: realtime-chat-service
+
+  datasource:
+    url: jdbc:h2:mem:chatdb
+    driverClassName: org.h2.Driver
+    username: sa
+    password:
+
+  h2:
+    console:
+      enabled: true
+      settings:
+        trace: false
+        web-allow-others: false
+
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+
+jwt:
+  refresh-expiration: ${JWT_REFRESH_EXPIRATION:P7D}
+  secret: ${JWT_SECRET:ZS87ZzFBP43UyPcy1BH/4SHLbXHvvTLxZKQa/x7vwh26XyamkeIGSrmVbzhVvO7+}
+  pepper: ${JWT_PEPPER:mUeaEJTkndKbKpRAIk8R0h7DL5zeUxHHIXRDdE4frvcIWPjpgxkQg5HHzOIC2phl}
