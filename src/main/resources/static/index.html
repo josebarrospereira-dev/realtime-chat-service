@@ -114,17 +114,20 @@
             padding: 1rem;
             display: flex;
             flex-direction: column;
+            align-items: flex-start;
             gap: 0.5rem;
             list-style: none;
         }
 
         #messageArea li {
             background: #f0f2f5;
-            padding: 0.5rem 0.8rem;
+            padding: 0.5rem 0.8rem 1.4rem;
             border-radius: 8px;
             font-size: 0.9rem;
             max-width: 85%;
+            min-width: 7rem;
             word-break: break-word;
+            position: relative;
         }
 
         #messageArea li.own {
@@ -132,11 +135,13 @@
             align-self: flex-end;
         }
 
-        #messageArea li.system {
-            background: transparent;
-            color: #888;
-            font-size: 0.8rem;
-            align-self: center;
+        #messageArea li .ts {
+            position: absolute;
+            bottom: 0.25rem;
+            right: 0.5rem;
+            font-size: 0.7rem;
+            color: #999;
+            white-space: nowrap;
         }
 
         #chat-input {
@@ -190,7 +195,7 @@
             </div>
             <button id="logout-btn" onclick="logout()">Sair</button>
         </div>
-        <ul id="messageArea"></ul>
+        <ul id="messageArea"><li id="top-anchor" style="height:1px;padding:0;min-width:0;background:none;"></li></ul>
         <div id="chat-input">
             <input type="text" id="message" placeholder="Digite uma mensagem..." onkeydown="if(event.key==='Enter') sendMessage()" />
             <button onclick="sendMessage()">Enviar</button>
@@ -200,6 +205,37 @@
     <script>
         let stompClient = null;
         let isRegisterMode = false;
+
+        function parseJwt(token) {
+            try {
+                return JSON.parse(atob(token.split('.')[1]));
+            } catch { return null; }
+        }
+
+        function isTokenExpired(token) {
+            const payload = parseJwt(token);
+            if (!payload?.exp) return true;
+            return payload.exp * 1000 < Date.now();
+        }
+
+        (function init() {
+            const token = localStorage.getItem('token');
+            const username = localStorage.getItem('username');
+            if (token && username) {
+                if (isTokenExpired(token)) {
+                    localStorage.clear();
+                    showAuthError('Sessão expirada. Faça login novamente.');
+                } else {
+                    showChat(username, token);
+                }
+            }
+        })();
+
+        function showAuthError(msg) {
+            const el = document.getElementById('auth-error');
+            el.style.color = '#dc2626';
+            el.textContent = msg;
+        }
 
         function toggleMode() {
             isRegisterMode = !isRegisterMode;
@@ -250,8 +286,8 @@
 
             if (res.ok) {
                 const data = await res.json();
-                sessionStorage.setItem('token', data.token);
-                sessionStorage.setItem('username', username);
+                localStorage.setItem('token', data.token);
+                localStorage.setItem('username', username);
                 showChat(username, data.token);
             } else {
                 errorEl.style.color = '#dc2626';
@@ -261,8 +297,7 @@
 
         function showChat(username, token) {
             document.getElementById('auth-page').style.display = 'none';
-            const chatPage = document.getElementById('chat-page');
-            chatPage.style.display = 'flex';
+            document.getElementById('chat-page').style.display = 'flex';
             document.getElementById('chat-username').textContent = username;
             connect(token);
         }
@@ -273,12 +308,81 @@
             stompClient.debug = null;
 
             stompClient.connect({ 'Authorization': 'Bearer ' + token }, function () {
+                loadMessages(0).then(() => setupObserver());
                 stompClient.subscribe('/topic/public', function (payload) {
                     showMessage(JSON.parse(payload.body));
                 });
             }, function () {
-                logout();
+                handleExpired();
             });
+        }
+
+        let currentPage = 0;
+        let hasMore = true;
+        let loading = false;
+        let observer = null;
+
+        function setupObserver() {
+            const list = document.getElementById('messageArea');
+            const anchor = document.getElementById('top-anchor');
+            console.log('[observer] setup — list.scrollHeight:', list.scrollHeight, 'list.clientHeight:', list.clientHeight, 'anchor:', anchor);
+            if (observer) observer.disconnect();
+            observer = new IntersectionObserver((entries) => {
+                const e = entries[0];
+                console.log('[observer] fired — isIntersecting:', e.isIntersecting, 'hasMore:', hasMore, 'loading:', loading);
+                if (e.isIntersecting && hasMore && !loading) {
+                    loadMessages(++currentPage);
+                }
+            }, { root: list, rootMargin: '200px 0px 0px 0px', threshold: 0 });
+            observer.observe(anchor);
+            console.log('[observer] observing anchor');
+        }
+
+        async function loadMessages(page = 0) {
+            console.log('[loadMessages] called — page:', page, 'loading:', loading, 'hasMore:', hasMore);
+            if (loading || !hasMore) {
+                console.log('[loadMessages] skipped');
+                return;
+            }
+            loading = true;
+
+            const res = await fetch(`/api/chat/messages?page=${page}`, {
+                headers: { 'Authorization': 'Bearer ' + localStorage.getItem('token') }
+            });
+            if (res.status === 401) { handleExpired(); return; }
+            const data = await res.json();
+            console.log('[loadMessages] received:', data.content.length, 'messages, last:', data.last);
+
+            if (data.last) {
+                hasMore = false;
+                console.log('[loadMessages] hasMore = false');
+            }
+
+            if (data.content.length > 0) {
+                const list = document.getElementById('messageArea');
+                const prevHeight = list.scrollHeight;
+
+                data.content.reverse().forEach(m => prependMessage(m));
+
+                if (page > 0) {
+                    list.scrollTop = list.scrollHeight - prevHeight;
+                    console.log('[loadMessages] scrollTop adjusted to:', list.scrollTop);
+                } else {
+                    list.scrollTop = list.scrollHeight;
+                    console.log('[loadMessages] initial scroll — scrollTop:', list.scrollTop, 'scrollHeight:', list.scrollHeight);
+                }
+            }
+
+            loading = false;
+            console.log('[loadMessages] done');
+        }
+
+        function handleExpired() {
+            if (stompClient) stompClient.disconnect();
+            localStorage.clear();
+            document.getElementById('chat-page').style.display = 'none';
+            document.getElementById('auth-page').style.display = 'flex';
+            showAuthError('Sessão expirada. Faça login novamente.');
         }
 
         function sendMessage() {
@@ -287,29 +391,49 @@
             if (!content || !stompClient) return;
 
             stompClient.send('/app/chat.sendMessage', {}, JSON.stringify({
-                sender: sessionStorage.getItem('username'),
+                sender: localStorage.getItem('username'),
                 content
             }));
             input.value = '';
         }
 
-        function showMessage(message) {
-            const list = document.getElementById('messageArea');
-            const li = document.createElement('li');
-            const currentUser = sessionStorage.getItem('username');
+        function formatTs(raw) {
+            if (!raw) return '';
+            const d = new Date(Array.isArray(raw)
+                ? new Date(raw[0], raw[1]-1, raw[2], raw[3]||0, raw[4]||0)
+                : raw);
+            return d.toLocaleString('pt-BR', { day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' });
+        }
 
+        function buildMessageEl(message) {
+            const currentUser = localStorage.getItem('username');
+            const li = document.createElement('li');
             li.className = message.sender === currentUser ? 'own' : '';
             li.textContent = message.sender === currentUser
                 ? message.content
                 : `${message.sender}: ${message.content}`;
+            const ts = document.createElement('span');
+            ts.className = 'ts';
+            ts.textContent = formatTs(message.timestamp);
+            li.appendChild(ts);
+            return li;
+        }
 
-            list.appendChild(li);
+        function prependMessage(message) {
+            const list = document.getElementById('messageArea');
+            const anchor = document.getElementById('top-anchor');
+            list.insertBefore(buildMessageEl(message), anchor.nextSibling);
+        }
+
+        function showMessage(message) {
+            const list = document.getElementById('messageArea');
+            list.appendChild(buildMessageEl(message));
             list.scrollTop = list.scrollHeight;
         }
 
         function logout() {
             if (stompClient) stompClient.disconnect();
-            sessionStorage.clear();
+            localStorage.clear();
             location.reload();
         }
     </script>
