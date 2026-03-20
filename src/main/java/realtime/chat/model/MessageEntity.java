@@ -2,8 +2,6 @@ package realtime.chat.model;
 
 import jakarta.persistence.*;
 import lombok.*;
-import realtime.chat.model.enums.MessageType;
-
 import java.time.LocalDateTime;
 
 @Entity
@@ -17,13 +15,12 @@ public class MessageEntity {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    private String sender;
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @JoinColumn(name = "user_id", nullable = false)
+    private UserEntity sender;
 
     @Column(columnDefinition = "TEXT")
     private String content;
-
-    @Enumerated(EnumType.STRING)
-    private MessageType type;
 
     private LocalDateTime timestamp;
 }

@@ -1,0 +1,8 @@
+databaseChangeLog:
+  - changeSet:
+      id: 001-drop-type-column-from-messages
+      author: jose
+      changes:
+        - dropColumn:
+            tableName: messages
+            columnName: type

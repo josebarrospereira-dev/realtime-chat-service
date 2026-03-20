@@ -9,7 +9,8 @@ Projeto de estudo e prática com Spring Boot, focado na implementação de um se
 - **Spring WebSocket** + **STOMP** — comunicação em tempo real
 - **JJWT 0.11.5** — geração e validação de tokens JWT
 - **Argon2** + **pepper** — hashing seguro de senhas
-- **H2** — banco de dados em memória *(uso em desenvolvimento/testes)*
+- **PostgreSQL** — banco de dados relacional
+- **Liquibase** — versionamento e migração de schema
 - **Spring Data JPA** + **Hibernate**
 - **Springdoc OpenAPI 3** — documentação Swagger
 - **Lombok**
@@ -31,7 +32,7 @@ src/main/java/realtime/chat/
 ├── dto/
 ├── model/
 │   ├── UserEntity.java
-│   ├── MessageEntity.java
+│   ├── MessageEntity.java          # FK para UserEntity (user_id)
 │   └── enums/
 │       └── Role.java               # USER, ADMIN
 ├── repository/
@@ -56,18 +57,47 @@ src/main/java/realtime/chat/
 | `JWT_SECRET`           | Chave de assinatura do JWT         | valor embutido       |
 | `JWT_REFRESH_EXPIRATION` | Tempo de expiração do token (ISO 8601) | `P7D` (7 dias) |
 | `JWT_PEPPER`           | Pepper adicionado ao hash da senha | valor embutido       |
+| `DB_HOST`              | Host do PostgreSQL                 | `localhost`          |
+| `DB_PORT`              | Porta do PostgreSQL                | `5432`               |
+| `DB_NAME`              | Nome do banco                      | `chat_db`            |
+| `DB_USER`              | Usuário do banco                   | `chat_user`          |
+| `DB_PASSWORD`          | Senha do banco                     | `chat_password`      |
 
 > Em produção, **nunca** use os valores padrão. Defina as variáveis de ambiente com valores gerados de forma segura.
 
 ## Como executar
 
-```bash
-# Com Maven Wrapper
-./mvnw spring-boot:run
+### Com Docker (recomendado)
 
-# Definindo variáveis de ambiente (exemplo)
-JWT_SECRET=<sua_chave> JWT_PEPPER=<seu_pepper> ./mvnw spring-boot:run
+O projeto inclui um `docker-compose.yaml` que sobe a aplicação e o PostgreSQL juntos.
+
+Crie um arquivo `.env` na raiz com as variáveis necessárias:
+
+```env
+DB_NAME=chat_db
+DB_USER=chat_user
+DB_PASSWORD=chat_password
+JWT_SECRET=<sua_chave>
+JWT_PEPPER=<seu_pepper>
 ```
+
+Depois suba os containers:
+
+```bash
+docker compose up --build
+```
+
+A aplicação ficará disponível em `http://localhost:3000/api`.
+
+### Sem Docker
+
+É necessário ter um PostgreSQL rodando e configurar as variáveis de ambiente antes de iniciar:
+
+```bash
+JWT_SECRET=<sua_chave> JWT_PEPPER=<seu_pepper> DB_PASSWORD=<senha> ./mvnw spring-boot:run
+```
+
+O Liquibase executa automaticamente as migrações de schema ao inicializar. Os arquivos de migração ficam em `src/main/resources/db/changelog/`.
 
 ## Endpoints REST
 
@@ -92,13 +122,11 @@ O projeto inclui um cliente web em `/api/index.html` para testes e validação d
 - Mensagens próprias destacadas visualmente
 - Logout com desconexão do WebSocket
 
-## Banco de dados (H2)
+## Banco de dados
 
-Por ser um projeto de estudo, o banco de dados é **em memória** — os dados são perdidos ao reiniciar a aplicação.
+Utiliza **PostgreSQL**. É necessário ter uma instância rodando e um banco criado antes de subir a aplicação.
 
-- Console H2: `http://localhost:8080/api/h2-console`
-- JDBC URL: `jdbc:h2:mem:chatdb`
-- Usuário: `sa` / Senha: *(vazia)*
+O schema é gerenciado pelo **Liquibase** — as tabelas são criadas e migradas automaticamente no startup, sem necessidade de executar SQL manualmente.
 
 Um usuário `admin` com senha `admin123` é criado automaticamente na inicialização via `DataInitializer`.
 

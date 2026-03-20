@@ -4,7 +4,9 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import realtime.chat.dto.ChatMessageDto;
 import realtime.chat.model.MessageEntity;
+import realtime.chat.model.UserEntity;
 import realtime.chat.repository.MessageRepository;
+import realtime.chat.repository.UserRepository;
 
 import java.time.LocalDateTime;
 
@@ -12,23 +14,19 @@ import java.time.LocalDateTime;
 @RequiredArgsConstructor
 public class ChatService {
 
-    private final MessageRepository repository;
+    private final MessageRepository messageRepository;
+    private final UserRepository userRepository;
 
     public ChatMessageDto processAndSaveMessage(ChatMessageDto dto, String username) {
-        MessageEntity entity = MessageEntity.builder()
-                .sender(username)
+        UserEntity user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        MessageEntity entity = messageRepository.save(MessageEntity.builder()
+                .sender(user)
                 .content(dto.content())
-                .type(dto.type())
                 .timestamp(LocalDateTime.now())
-                .build();
+                .build());
 
-        repository.save(entity);
-
-        return new ChatMessageDto(
-                entity.getSender(),
-                entity.getContent(),
-                entity.getType(),
-                entity.getTimestamp()
-        );
+        return new ChatMessageDto(username, entity.getContent(), entity.getTimestamp());
     }
 }

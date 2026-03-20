@@ -1,0 +1,7 @@
+databaseChangeLog:
+  - include:
+      file: db/changelog/changes/001-drop-type-column-from-messages.yaml
+      relativeToChangelogFile: false
+  - include:
+      file: db/changelog/changes/002-replace-sender-with-user-id-in-messages.yaml
+      relativeToChangelogFile: false
