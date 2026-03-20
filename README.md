@@ -101,10 +101,11 @@ O Liquibase executa automaticamente as migrações de schema ao inicializar. Os 
 
 ## Endpoints REST
 
-| Método | Rota             | Acesso      | Descrição              |
-|--------|------------------|-------------|------------------------|
-| POST   | `/api/auth/login`    | Público     | Autentica e retorna JWT |
-| POST   | `/api/auth/register` | Público     | Cadastra novo usuário (role `USER`) |
+| Método | Rota                        | Acesso         | Descrição                                        |
+|--------|-----------------------------|----------------|--------------------------------------------------|
+| POST   | `/api/auth/login`           | Público        | Autentica e retorna JWT                          |
+| POST   | `/api/auth/register`        | Público        | Cadastra novo usuário (role `USER`)              |
+| GET    | `/api/chat/messages?page=N` | Autenticado    | Retorna página N de mensagens (20 por página, ordem decrescente) |
 
 ## WebSocket
 
@@ -120,6 +121,10 @@ O projeto inclui um cliente web em `/api/index.html` para testes e validação d
 - Tela de login e cadastro de conta
 - Chat em tempo real após autenticação
 - Mensagens próprias destacadas visualmente
+- Timestamp em cada mensagem
+- Paginação automática ao rolar para o topo (carrega mensagens mais antigas)
+- Token armazenado em `localStorage` — sessão persiste entre abas e recarregamentos
+- Detecção de token expirado: exibe mensagem e retorna à tela de login automaticamente
 - Logout com desconexão do WebSocket
 
 ## Banco de dados
@@ -127,6 +132,14 @@ O projeto inclui um cliente web em `/api/index.html` para testes e validação d
 Utiliza **PostgreSQL**. É necessário ter uma instância rodando e um banco criado antes de subir a aplicação.
 
 O schema é gerenciado pelo **Liquibase** — as tabelas são criadas e migradas automaticamente no startup, sem necessidade de executar SQL manualmente.
+
+Os changelogs ficam em `src/main/resources/db/changelog/changes/`:
+
+| Arquivo | Descrição |
+|---------|-----------|
+| `000-create-initial-tables.yaml` | Cria as tabelas `users` e `messages` no estado inicial (executado apenas se não existirem) |
+| `001-drop-type-column-from-messages.yaml` | Remove a coluna `type` da tabela `messages` |
+| `002-replace-sender-with-user-id-in-messages.yaml` | Substitui a coluna `sender` por FK `user_id` referenciando `users` |
 
 Um usuário `admin` com senha `admin123` é criado automaticamente na inicialização via `DataInitializer`.
 
