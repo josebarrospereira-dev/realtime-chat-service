@@ -288,8 +288,7 @@
 
             stompClient.send('/app/chat.sendMessage', {}, JSON.stringify({
                 sender: sessionStorage.getItem('username'),
-                content,
-                type: 'CHAT'
+                content
             }));
             input.value = '';
         }
@@ -299,17 +298,10 @@
             const li = document.createElement('li');
             const currentUser = sessionStorage.getItem('username');
 
-            if (message.type === 'JOIN' || message.type === 'LEAVE') {
-                li.className = 'system';
-                li.textContent = message.type === 'JOIN'
-                    ? `${message.sender} entrou no chat`
-                    : `${message.sender} saiu do chat`;
-            } else {
-                li.className = message.sender === currentUser ? 'own' : '';
-                li.textContent = message.sender === currentUser
-                    ? message.content
-                    : `${message.sender}: ${message.content}`;
-            }
+            li.className = message.sender === currentUser ? 'own' : '';
+            li.textContent = message.sender === currentUser
+                ? message.content
+                : `${message.sender}: ${message.content}`;
 
             list.appendChild(li);
             list.scrollTop = list.scrollHeight;

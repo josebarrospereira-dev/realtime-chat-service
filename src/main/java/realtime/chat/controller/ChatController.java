@@ -25,9 +25,4 @@ public class ChatController {
         return chatService.processAndSaveMessage(chatMessage, username);
     }
 
-    @MessageMapping("/chat.addUser")
-    @SendTo("/topic/public")
-    public ChatMessageDto addUser(@Payload ChatMessageDto chatMessage) {
-        return chatMessage;
-    }
 }

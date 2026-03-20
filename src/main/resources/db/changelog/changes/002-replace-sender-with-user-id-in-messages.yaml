@@ -1,0 +1,26 @@
+databaseChangeLog:
+  - changeSet:
+      id: 002-replace-sender-with-user-id-in-messages
+      author: jose
+      changes:
+        - addColumn:
+            tableName: messages
+            columns:
+              - column:
+                  name: user_id
+                  type: bigint
+        - sql:
+            sql: UPDATE messages SET user_id = (SELECT id FROM users WHERE username = messages.sender)
+        - addNotNullConstraint:
+            tableName: messages
+            columnName: user_id
+            columnDataType: bigint
+        - addForeignKeyConstraint:
+            baseTableName: messages
+            baseColumnNames: user_id
+            constraintName: fk_messages_user
+            referencedTableName: users
+            referencedColumnNames: id
+        - dropColumn:
+            tableName: messages
+            columnName: sender

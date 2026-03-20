@@ -1,7 +1,7 @@
 package realtime.chat.service;
 
 import lombok.RequiredArgsConstructor;
-import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.NullMarked;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -14,8 +14,9 @@ public class UserDetailsService implements org.springframework.security.core.use
 
     private final UserRepository userRepository;
 
+    @NullMarked
     @Override
-    public UserDetails loadUserByUsername(@NonNull String username) throws UsernameNotFoundException {
+    public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
         return userRepository.findByUsername(username)
                 .map(u -> User.withUsername(u.getUsername())
                         .password(u.getPassword())
